@@ -1,0 +1,78 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.card {
+  padding: 20px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.likes {
+  margin-left: 10px;
+  color: #888;
+}
+
+.tags {
+  margin-top: 10px;
+}
+
+.tag {
+  background: #e6f7ff;
+  color: #1890ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.content {
+  margin-bottom: 20px;
+
+  h1,
+  h2,
+  h3 {
+    font-weight: bold;
+  }
+
+  p {
+    margin: 10px 0;
+  }
+}
+
+.author {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.authorName {
+  font-weight: bold;
+  margin: 0;
+}
+
+.date {
+  color: #888;
+  margin: 0;
+}
+
+.loading {
+  display: block;
+  margin: 50px auto;
+}
