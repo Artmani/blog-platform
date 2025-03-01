@@ -27,6 +27,6 @@
   box-sizing: border-box;
 }
 
-button {
-  font-family: inherit;
+body {
+  margin: 0;
 }
