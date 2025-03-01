@@ -2,11 +2,15 @@ import { useSelector } from 'react-redux'
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Spin, Alert, Button, Popconfirm } from 'antd'
-import { HeartOutlined } from '@ant-design/icons'
+import { HeartOutlined, HeartFilled } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
-
 import { toast } from 'react-toastify'
-import { useGetArticleQuery, useDeleteArticleMutation } from '../store/articlesApi'
+import {
+  useGetArticleQuery,
+  useDeleteArticleMutation,
+  useFavoriteArticleMutation,
+  useUnfavoriteArticleMutation,
+} from '../store/articlesApi'
 import 'react-toastify/dist/ReactToastify.css'
 import styles from '../styles/ArticleDetailPage.module.scss'
 
@@ -14,32 +18,43 @@ function ArticleDetailPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const user = useSelector((state) => state.user.user)
-  const { data, articleError, isLoading } = useGetArticleQuery(slug)
+  const { data, articleError, isLoading, refetch } = useGetArticleQuery(slug)
   const [deleteArticle] = useDeleteArticleMutation()
+  const [favoriteArticle] = useFavoriteArticleMutation()
+  const [unfavoriteArticle] = useUnfavoriteArticleMutation()
 
   if (isLoading) return <Spin size="large" className={styles.loading} />
-  if (articleError) return <Alert message="Error loading article" type="error" />
+  if (articleError) return <Alert message="Ошибка загрузки статьи" type="error" />
 
   const article = data?.article
 
   const handleDelete = async () => {
     try {
       await deleteArticle(slug).unwrap()
-      toast.success('Article deleted successfully!')
+      toast.success('Статья успешно удалена!')
       navigate('/')
-    } catch (error) {
-      console.error('Error deleting article:', error)
-      if (error.status === 401) {
-        toast.error('Unauthorized. Please log in again.')
-      } else if (error.status === 0 || error.status >= 500) {
-        toast.error('Network error or server is unavailable. Please try again later.')
-      } else {
-        toast.error('An unexpected error occurred. Please contact support.')
-      }
+    } catch (err) {
+      toast.error('Ошибка удаления статьи')
     }
   }
 
-  const canEditOrDelete = user && user.username === article.author.username
+  const handleLikeClick = async () => {
+    if (!user) {
+      toast.error('Пожалуйста, войдите в систему, чтобы оценить статью')
+      navigate('/sign-in')
+      return
+    }
+    try {
+      if (article.favorited) {
+        await unfavoriteArticle(slug).unwrap()
+      } else {
+        await favoriteArticle(slug).unwrap()
+      }
+      refetch()
+    } catch (err) {
+      toast.error('Ошибка обновления статуса лайка')
+    }
+  }
 
   return (
     <div className={styles.container}>
@@ -47,27 +62,39 @@ function ArticleDetailPage() {
         <div className={styles.header}>
           <h1 className={styles.title}>
             {article.title}
-            <span className={styles.likes}>
-              <HeartOutlined /> {article.favoritesCount}
+            <span
+              className={styles.likes}
+              role="button"
+              tabIndex={0}
+              onClick={handleLikeClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleLikeClick()
+                }
+              }}
+              style={{ cursor: 'pointer', marginLeft: '10px' }}
+            >
+              {article.favorited ? <HeartFilled style={{ color: 'red' }} /> : <HeartOutlined />}{' '}
+              {article.favoritesCount}
             </span>
           </h1>
           <div className={styles.tags}>
-            {article.tagList.map((tag, index) => (
-              <span key={`${slug}-${tag}-${index}`} className={styles.tag}>
+            {article.tagList.map((tag, idx) => (
+              <span key={`${slug}-${tag}-${idx}`} className={styles.tag}>
                 {tag}
               </span>
             ))}
           </div>
-          {canEditOrDelete && (
+          {user && user.username === article.author.username && (
             <div className={styles.actions}>
               <Button type="primary" onClick={() => navigate(`/articles/${slug}/edit`)} style={{ marginRight: 8 }}>
                 Edit
               </Button>
               <Popconfirm
-                title="Are you sure to delete this article?"
+                title="Вы уверены, что хотите удалить статью?"
                 onConfirm={handleDelete}
-                okText="Yes"
-                cancelText="No"
+                okText="Да"
+                cancelText="Нет"
                 placement="right"
               >
                 <Button type="danger">Delete</Button>
@@ -84,9 +111,11 @@ function ArticleDetailPage() {
             alt={article.author.username}
             className={styles.avatar}
             onError={(e) => {
-              const { target } = e
-              target.style.display = 'none'
-              target.parentElement.classList.add(styles.showPlaceholder)
+              const tgt = e.target
+              tgt.style.display = 'none'
+              if (tgt.parentElement) {
+                tgt.parentElement.classList.add(styles.showPlaceholder)
+              }
             }}
           />
           <div>

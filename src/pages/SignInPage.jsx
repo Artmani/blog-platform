@@ -12,8 +12,8 @@ import 'react-toastify/dist/ReactToastify.css'
 import styles from '../styles/Form.module.scss'
 
 const signInSchema = yup.object().shape({
-  email: yup.string().email('Invalid email').required('Email is required'),
-  password: yup.string().required('Password is required'),
+  email: yup.string().email('Неверный email').required('Email обязателен'),
+  password: yup.string().required('Пароль обязателен'),
 })
 
 function SignInPage() {
@@ -24,8 +24,9 @@ function SignInPage() {
   } = useForm({
     resolver: yupResolver(signInSchema),
     defaultValues: { email: '', password: '' },
+    mode: 'onChange',
   })
-  const [loginUser, { isLoading, error: apiError, isError, reset }] = useLoginMutation()
+  const [loginUser, { isLoading, isError, reset }] = useLoginMutation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
@@ -36,55 +37,45 @@ function SignInPage() {
       if (response.user && response.user.token) {
         dispatch(setUser(response.user))
         localStorage.setItem('token', response.user.token)
-        toast.success('Login successful!')
+        toast.success('Успешный вход!')
         navigate('/')
       } else {
-        throw new Error('Token not found in response')
+        toast.error('Токен не найден в ответе')
       }
     } catch (error) {
-      console.error('Login error caught:', error)
-      if (error.status === 401) {
-        toast.error('Invalid email or password. Please check your credentials.')
-      } else if (error.status === 422) {
-        toast.error('Validation failed on server.')
-      } else if (error.status === 400) {
-        toast.error('Invalid input data.')
-      } else if (error.status === 0 || error.status >= 500) {
-        toast.error('Network error or server is unavailable. Please try again later.')
-      } else {
-        toast.error('An unexpected error occurred. Please contact support.')
-      }
+      toast.error('Ошибка входа')
     }
   }
 
   useEffect(() => {
     if (isError) {
-      console.log('Error detected, resetting form:', apiError)
       reset({ email: '', password: '' })
     }
-  }, [isError, apiError, reset])
+  }, [isError, reset])
 
   return (
     <div className={styles.formContainer}>
-      <h2>Sign In</h2>
+      <h2>Вход в систему</h2>
       <Form onFinish={handleSubmit(onSubmit)} layout="vertical">
         <Form.Item label="Email" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
           <Controller
             name="email"
             control={control}
-            render={({ field }) => <Input {...field} placeholder="Email address" autoComplete="email" />}
+            render={({ field }) => <Input {...field} placeholder="Введите email" autoComplete="email" />}
           />
         </Form.Item>
-        <Form.Item label="Password" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
+        <Form.Item label="Пароль" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
           <Controller
             name="password"
             control={control}
-            render={({ field }) => <Input.Password {...field} placeholder="Password" autoComplete="current-password" />}
+            render={({ field }) => (
+              <Input.Password {...field} placeholder="Введите пароль" autoComplete="current-password" />
+            )}
           />
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" block disabled={isLoading || !isValid}>
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? 'Вход...' : 'Войти'}
           </Button>
         </Form.Item>
       </Form>

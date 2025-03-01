@@ -24,18 +24,11 @@ function AppContent() {
     const checkToken = async () => {
       const token = localStorage.getItem('token')
       if (!token) {
-        console.warn('No token found in localStorage, logging out...')
         dispatch(logout())
       } else {
         try {
-          console.log('Token found, attempting to load current user...')
-          const result = await dispatch(getCurrentUser()).unwrap()
-          if (!result) {
-            console.warn('User not found with token, logging out...')
-            dispatch(logout())
-          }
+          await dispatch(getCurrentUser()).unwrap()
         } catch (error) {
-          console.error('Error loading current user:', error)
           dispatch(logout())
         }
       }
@@ -63,19 +56,14 @@ function AppContent() {
             <Button type="primary" onClick={() => navigate('/new-article')} style={{ marginRight: 10 }}>
               Create article
             </Button>
-            <span
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               onClick={() => handleHeaderClick('/profile')}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  handleHeaderClick('/profile')
-                }
-              }}
               className={styles.userName}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               {user.username}
-            </span>
+            </button>
             <Avatar
               role="button"
               tabIndex={0}

@@ -31,7 +31,6 @@ export const getCurrentUser = createAsyncThunk(
   async (_, { dispatch, rejectWithValue, getState }) => {
     const { token } = getState().user
     if (!token) {
-      console.warn('No token available, skipping getCurrentUser')
       return null
     }
     try {
@@ -39,9 +38,8 @@ export const getCurrentUser = createAsyncThunk(
       if (result && result.user) {
         return result.user
       }
-      throw new Error('No user data in response')
+      return rejectWithValue({ message: 'No user data in response' })
     } catch (error) {
-      console.error('Error in getCurrentUser:', error)
       return rejectWithValue(error.response?.data || { message: 'Failed to load user' })
     }
   }

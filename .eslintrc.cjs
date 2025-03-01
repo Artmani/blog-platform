@@ -42,7 +42,7 @@ module.exports = {
     'linebreak-style': [0, 'unix'],
     quotes: ['error', 'single'],
     'react/react-in-jsx-scope': 'off',
-    'react/prop-types': 'off', // Отключаем, так как не используем PropTypes
+    'react/prop-types': 'off',
     'import/extensions': [
       'error',
       'ignorePackages',

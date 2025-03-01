@@ -12,14 +12,22 @@ import 'react-toastify/dist/ReactToastify.css'
 import styles from '../styles/Form.module.scss'
 
 const signUpSchema = yup.object().shape({
-  email: yup.string().email('Invalid email').required('Email is required'),
-  username: yup.string().min(3).max(20).required('Username is required'),
-  password: yup.string().min(6).max(40).required('Password is required'),
+  email: yup.string().email('Неверный email').required('Email обязателен'),
+  username: yup
+    .string()
+    .min(3, 'Имя пользователя должно быть не менее 3 символов')
+    .max(20, 'Имя пользователя должно быть не более 20 символов')
+    .required('Имя пользователя обязательно'),
+  password: yup
+    .string()
+    .min(6, 'Пароль должен быть не менее 6 символов')
+    .max(40, 'Пароль должен быть не более 40 символов')
+    .required('Пароль обязателен'),
   repeatPassword: yup
     .string()
-    .oneOf([yup.ref('password'), null], 'Passwords must match')
-    .required('Repeat password is required'),
-  agreement: yup.boolean().oneOf([true], 'You must agree'),
+    .oneOf([yup.ref('password'), null], 'Пароли должны совпадать')
+    .required('Повторите пароль'),
+  agreement: yup.boolean().oneOf([true], 'Необходимо дать согласие'),
 })
 
 function SignUpPage() {
@@ -30,8 +38,9 @@ function SignUpPage() {
   } = useForm({
     resolver: yupResolver(signUpSchema),
     defaultValues: { email: '', username: '', password: '', repeatPassword: '', agreement: false },
+    mode: 'onChange',
   })
-  const [registerUser, { isLoading, error: apiError, isError, reset }] = useRegisterMutation()
+  const [registerUser, { isLoading, isError, reset }] = useRegisterMutation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
@@ -43,68 +52,52 @@ function SignUpPage() {
       const response = await registerUser(formattedData).unwrap()
       dispatch(setUser(response.user))
       localStorage.setItem('token', response.user.token)
-      toast.success('Registration successful!')
+      toast.success('Регистрация прошла успешно!')
       navigate('/')
     } catch (error) {
-      console.error('Registration error caught:', error)
-      if (error.status === 400) {
-        if (error.data?.errors) {
-          Object.keys(error.data.errors).forEach((key) => {
-            toast.error(error.data.errors[key])
-          })
-        } else {
-          toast.error('Invalid input data.')
-        }
-      } else if (error.status === 422) {
-        if (error.data?.errors) {
-          Object.keys(error.data.errors).forEach((key) => {
-            toast.error(error.data.errors[key])
-          })
-        } else {
-          toast.error('Validation failed on server.')
-        }
-      } else if (error.status === 0 || error.status >= 500) {
-        toast.error('Network error or server is unavailable. Please try again later.')
-      } else {
-        toast.error('An unexpected error occurred. Please contact support.')
-      }
+      toast.error('Ошибка регистрации')
     }
   }
 
   useEffect(() => {
     if (isError) {
-      console.log('Error detected, resetting form:', apiError)
       reset({ email: '', username: '', password: '', repeatPassword: '', agreement: false })
     }
-  }, [isError, apiError, reset])
+  }, [isError, reset])
 
   return (
     <div className={styles.formContainer}>
-      <h2>Create new account</h2>
+      <h2>Создать новый аккаунт</h2>
       <Form onFinish={handleSubmit(onSubmit)} layout="vertical">
         <Form.Item label="Email" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
           <Controller
             name="email"
             control={control}
-            render={({ field }) => <Input {...field} placeholder="Email address" autoComplete="email" />}
-          />
-        </Form.Item>
-        <Form.Item label="Username" validateStatus={errors.username ? 'error' : ''} help={errors.username?.message}>
-          <Controller
-            name="username"
-            control={control}
-            render={({ field }) => <Input {...field} placeholder="Username" autoComplete="username" />}
-          />
-        </Form.Item>
-        <Form.Item label="Password" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => <Input.Password {...field} placeholder="Password" autoComplete="new-password" />}
+            render={({ field }) => <Input {...field} placeholder="Введите email" autoComplete="email" />}
           />
         </Form.Item>
         <Form.Item
-          label="Repeat Password"
+          label="Имя пользователя"
+          validateStatus={errors.username ? 'error' : ''}
+          help={errors.username?.message}
+        >
+          <Controller
+            name="username"
+            control={control}
+            render={({ field }) => <Input {...field} placeholder="Введите имя пользователя" autoComplete="username" />}
+          />
+        </Form.Item>
+        <Form.Item label="Пароль" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <Input.Password {...field} placeholder="Введите пароль" autoComplete="new-password" />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Повторите пароль"
           validateStatus={errors.repeatPassword ? 'error' : ''}
           help={errors.repeatPassword?.message}
         >
@@ -112,7 +105,7 @@ function SignUpPage() {
             name="repeatPassword"
             control={control}
             render={({ field }) => (
-              <Input.Password {...field} placeholder="Repeat Password" autoComplete="new-password" />
+              <Input.Password {...field} placeholder="Повторите пароль" autoComplete="new-password" />
             )}
           />
         </Form.Item>
@@ -122,14 +115,14 @@ function SignUpPage() {
             control={control}
             render={({ field }) => (
               <Checkbox {...field} checked={field.value}>
-                I agree to the processing of my personal information
+                Я согласен с обработкой персональных данных
               </Checkbox>
             )}
           />
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" block disabled={isLoading || !isValid}>
-            {isLoading ? 'Creating...' : 'Create'}
+            {isLoading ? 'Регистрация...' : 'Создать аккаунт'}
           </Button>
         </Form.Item>
       </Form>

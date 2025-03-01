@@ -1,20 +1,27 @@
 import React, { useState } from 'react'
 import { List, Card, Pagination, Spin, Alert } from 'antd'
-import { HeartOutlined } from '@ant-design/icons'
+import { HeartOutlined, HeartFilled } from '@ant-design/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useGetArticlesQuery } from '../store/articlesApi'
+import { toast } from 'react-toastify'
+import { useSelector } from 'react-redux'
+import { useGetArticlesQuery, useFavoriteArticleMutation, useUnfavoriteArticleMutation } from '../store/articlesApi'
 import styles from '../styles/ArticlesListPage.module.scss'
 
 function ArticlesListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page'), 10) || 1)
+  const initialPage = parseInt(searchParams.get('page'), 10) || 1
+  const [currentPage, setCurrentPage] = useState(initialPage)
   const pageSize = 10
   const navigate = useNavigate()
+  const user = useSelector((state) => state.user.user)
 
-  const { data, error, isLoading } = useGetArticlesQuery({
+  const { data, error, isLoading, refetch } = useGetArticlesQuery({
     offset: (currentPage - 1) * pageSize,
     limit: pageSize,
   })
+
+  const [favoriteArticle] = useFavoriteArticleMutation()
+  const [unfavoriteArticle] = useUnfavoriteArticleMutation()
 
   if (isLoading) {
     return (
@@ -26,7 +33,7 @@ function ArticlesListPage() {
   if (error) {
     return (
       <div className={styles.errorContainer}>
-        <Alert message="Error loading articles" type="error" />
+        <Alert message="Ошибка загрузки статей" type="error" />
       </div>
     )
   }
@@ -34,11 +41,27 @@ function ArticlesListPage() {
   const articles = data?.articles || []
   const totalArticles = data?.articlesCount || 0
 
-  const getUniqueKey = (article, index) => `${article.slug}-${article.createdAt}-${index}`
-
   const handlePageChange = (page) => {
     setCurrentPage(page)
-    setSearchParams({ page })
+    setSearchParams({ page: page.toString() })
+  }
+
+  const handleLikeClick = async (slug, favorited) => {
+    if (!user) {
+      toast.error('Пожалуйста, войдите в систему, чтобы оценить статью')
+      navigate('/sign-in')
+      return
+    }
+    try {
+      if (favorited) {
+        await unfavoriteArticle(slug).unwrap()
+      } else {
+        await favoriteArticle(slug).unwrap()
+      }
+      refetch()
+    } catch (err) {
+      toast.error('Ошибка обновления лайка')
+    }
   }
 
   return (
@@ -46,8 +69,8 @@ function ArticlesListPage() {
       <List
         grid={{ gutter: 16, column: 1 }}
         dataSource={articles}
-        renderItem={(article, index) => {
-          const uniqueKey = getUniqueKey(article, index)
+        renderItem={(article, idx) => {
+          const uniqueKey = `${article.slug}-${article.createdAt}-${idx}`
           const showPlaceholder = !article.author?.image || article.author.image === ''
 
           return (
@@ -67,13 +90,10 @@ function ArticlesListPage() {
                       className={styles.titleRow}
                     >
                       <h2 className={styles.title}>{article.title}</h2>
-                      <span className={styles.likes}>
-                        <HeartOutlined /> {article.favoritesCount || 0}
-                      </span>
                     </div>
                     <div className={styles.tags}>
-                      {article.tagList?.map((tag, tagIndex) => (
-                        <span key={`${uniqueKey}-tag-${tag}-${tagIndex}`} className={styles.tag}>
+                      {article.tagList?.map((tag, index) => (
+                        <span key={`${uniqueKey}-tag-${tag}-${index}`} className={styles.tag}>
                           {tag}
                         </span>
                       ))}
@@ -85,25 +105,42 @@ function ArticlesListPage() {
                       {article.author?.image && !showPlaceholder ? (
                         <img
                           src={article.author.image}
-                          alt={article.author?.username || 'Author'}
+                          alt={article.author?.username || 'Автор'}
                           className={styles.avatar}
                           onError={(e) => {
-                            const { target } = e
-                            target.style.display = 'none'
-                            target.parentElement.classList.add(styles.showPlaceholder)
+                            const tgt = e.target
+                            tgt.style.display = 'none'
+                            if (tgt.parentElement) {
+                              tgt.parentElement.classList.add(styles.showPlaceholder)
+                            }
                           }}
                         />
                       ) : (
                         <div
                           className={`${styles.avatarPlaceholder} ${showPlaceholder ? styles.showPlaceholder : ''}`}
-                          title={article.author?.username || 'Author'}
+                          title={article.author?.username || 'Автор'}
                         >
                           {article.author?.username?.charAt(0).toUpperCase() || 'A'}
                         </div>
                       )}
                     </div>
-                    <p className={styles.author}>{article.author?.username || 'Anonymous'}</p>
+                    <p className={styles.author}>{article.author?.username || 'Аноним'}</p>
                     <p className={styles.date}>{new Date(article.createdAt).toLocaleDateString()}</p>
+                    <div
+                      className={styles.likes}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleLikeClick(article.slug, article.favorited)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleLikeClick(article.slug, article.favorited)
+                        }
+                      }}
+                      style={{ cursor: 'pointer', marginTop: '8px' }}
+                    >
+                      {article.favorited ? <HeartFilled style={{ color: 'red' }} /> : <HeartOutlined />}{' '}
+                      {article.favoritesCount || 0}
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -111,7 +148,6 @@ function ArticlesListPage() {
           )
         }}
       />
-
       <Pagination
         align="center"
         current={currentPage}

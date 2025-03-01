@@ -63,6 +63,18 @@ export const articlesApi = createApi({
         method: 'DELETE',
       }),
     }),
+    favoriteArticle: builder.mutation({
+      query: (slug) => ({
+        url: `/articles/${slug}/favorite`,
+        method: 'POST',
+      }),
+    }),
+    unfavoriteArticle: builder.mutation({
+      query: (slug) => ({
+        url: `/articles/${slug}/favorite`,
+        method: 'DELETE',
+      }),
+    }),
   }),
 })
 
@@ -76,4 +88,6 @@ export const {
   useCreateArticleMutation,
   useUpdateArticleMutation,
   useDeleteArticleMutation,
+  useFavoriteArticleMutation,
+  useUnfavoriteArticleMutation,
 } = articlesApi
