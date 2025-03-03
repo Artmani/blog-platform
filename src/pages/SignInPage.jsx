@@ -5,10 +5,8 @@ import * as yup from 'yup'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { Form, Input, Button } from 'antd'
-import { toast } from 'react-toastify'
 import { setUser } from '../store/userSlice'
 import { useLoginMutation } from '../store/articlesApi'
-import 'react-toastify/dist/ReactToastify.css'
 import styles from '../styles/Form.module.scss'
 
 const signInSchema = yup.object().shape({
@@ -21,6 +19,7 @@ function SignInPage() {
     control,
     handleSubmit,
     formState: { errors, isValid },
+    setError,
   } = useForm({
     resolver: yupResolver(signInSchema),
     defaultValues: { email: '', password: '' },
@@ -37,13 +36,35 @@ function SignInPage() {
       if (response.user && response.user.token) {
         dispatch(setUser(response.user))
         localStorage.setItem('token', response.user.token)
-        toast.success('Успешный вход!')
         navigate('/')
-      } else {
-        toast.error('Токен не найден в ответе')
       }
     } catch (error) {
-      toast.error('Ошибка входа')
+      if (error.status === 401 || error.status === 422) {
+        if (error.data?.errors) {
+          Object.entries(error.data.errors).forEach(([key, value]) => {
+            let message
+            if (typeof value === 'string') {
+              message = value
+            } else if (Array.isArray(value)) {
+              message = value.join(' ')
+            } else {
+              message = ''
+            }
+            if (key === 'email' || key === 'password' || key === 'email or password') {
+              setError(key === 'email or password' ? 'email' : key, { type: 'manual', message })
+              if (key === 'email or password') {
+                setError('password', { type: 'manual', message })
+              }
+            } else {
+              setError('email', { type: 'manual', message })
+              setError('password', { type: 'manual', message })
+            }
+          })
+        } else if (error.data?.message) {
+          setError('email', { type: 'manual', message: error.data.message })
+          setError('password', { type: 'manual', message: error.data.message })
+        }
+      }
     }
   }
 

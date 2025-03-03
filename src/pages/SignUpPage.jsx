@@ -5,10 +5,8 @@ import * as yup from 'yup'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { Form, Input, Checkbox, Button } from 'antd'
-import { toast } from 'react-toastify'
 import { setUser } from '../store/userSlice'
 import { useRegisterMutation } from '../store/articlesApi'
-import 'react-toastify/dist/ReactToastify.css'
 import styles from '../styles/Form.module.scss'
 
 const signUpSchema = yup.object().shape({
@@ -35,6 +33,7 @@ function SignUpPage() {
     control,
     handleSubmit,
     formState: { errors, isValid },
+    setError,
   } = useForm({
     resolver: yupResolver(signUpSchema),
     defaultValues: { email: '', username: '', password: '', repeatPassword: '', agreement: false },
@@ -52,10 +51,23 @@ function SignUpPage() {
       const response = await registerUser(formattedData).unwrap()
       dispatch(setUser(response.user))
       localStorage.setItem('token', response.user.token)
-      toast.success('Регистрация прошла успешно!')
       navigate('/')
     } catch (error) {
-      toast.error('Ошибка регистрации')
+      if (error.status === 400 || error.status === 422) {
+        if (error.data?.errors) {
+          Object.entries(error.data.errors).forEach(([key, value]) => {
+            let message
+            if (typeof value === 'string') {
+              message = value
+            } else if (Array.isArray(value)) {
+              message = value.join(' ')
+            } else {
+              message = ''
+            }
+            setError(key, { type: 'manual', message })
+          })
+        }
+      }
     }
   }
 
