@@ -23,7 +23,10 @@ export const articlesApi = createApi({
     }),
     getArticle: builder.query({
       query: (slug) => `/articles/${slug}`,
-      providesTags: (result, error, slug) => [{ type: 'Article', id: slug }],
+      providesTags: (result, error, slug) => [
+        { type: 'Article', id: slug },
+        { type: 'Article', id: 'LIST' },
+      ],
     }),
     register: builder.mutation({
       query: (credentials) => ({
@@ -48,6 +51,10 @@ export const articlesApi = createApi({
         method: 'PUT',
         body: userData,
       }),
+      invalidatesTags: [
+        { type: 'Articles', id: 'LIST' },
+        { type: 'Article', id: 'LIST' },
+      ],
     }),
     createArticle: builder.mutation({
       query: (articleData) => ({
