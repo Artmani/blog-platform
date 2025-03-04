@@ -12,12 +12,18 @@ export const articlesApi = createApi({
       return headers
     },
   }),
+  tagTypes: ['Article', 'Articles'],
   endpoints: (builder) => ({
     getArticles: builder.query({
       query: ({ offset = 0, limit = 10 }) => `/articles?offset=${offset}&limit=${limit}`,
+      providesTags: (result) =>
+        result
+          ? [...result.articles.map(({ slug }) => ({ type: 'Article', id: slug })), { type: 'Articles', id: 'LIST' }]
+          : [{ type: 'Articles', id: 'LIST' }],
     }),
     getArticle: builder.query({
       query: (slug) => `/articles/${slug}`,
+      providesTags: (result, error, slug) => [{ type: 'Article', id: slug }],
     }),
     register: builder.mutation({
       query: (credentials) => ({
@@ -49,6 +55,7 @@ export const articlesApi = createApi({
         method: 'POST',
         body: { article: articleData },
       }),
+      invalidatesTags: [{ type: 'Articles', id: 'LIST' }],
     }),
     updateArticle: builder.mutation({
       query: ({ slug, articleData }) => ({
@@ -56,24 +63,37 @@ export const articlesApi = createApi({
         method: 'PUT',
         body: { article: articleData },
       }),
+      invalidatesTags: (result, error, { slug }) => [{ type: 'Article', id: slug }],
     }),
     deleteArticle: builder.mutation({
       query: (slug) => ({
         url: `/articles/${slug}`,
         method: 'DELETE',
       }),
+      invalidatesTags: (result, error, slug) => [
+        { type: 'Article', id: slug },
+        { type: 'Articles', id: 'LIST' },
+      ],
     }),
     favoriteArticle: builder.mutation({
       query: (slug) => ({
         url: `/articles/${slug}/favorite`,
         method: 'POST',
       }),
+      invalidatesTags: (result, error, slug) => [
+        { type: 'Article', id: slug },
+        { type: 'Articles', id: 'LIST' },
+      ],
     }),
     unfavoriteArticle: builder.mutation({
       query: (slug) => ({
         url: `/articles/${slug}/favorite`,
         method: 'DELETE',
       }),
+      invalidatesTags: (result, error, slug) => [
+        { type: 'Article', id: slug },
+        { type: 'Articles', id: 'LIST' },
+      ],
     }),
   }),
 })
