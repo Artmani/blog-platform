@@ -76,11 +76,12 @@ function AppContent() {
               }}
             />
             <Button
+              color="primary"
+              variant="solid"
               onClick={() => {
                 dispatch(logout())
                 localStorage.removeItem('token')
               }}
-              ghost
             >
               Log Out
             </Button>
